@@ -222,4 +222,115 @@
         toggle: togglePanel,
         isOpen: () => isOpen
     };
+
+    // Handle login form submission
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+            
+            if (window.DataPersistence) {
+                let user = window.DataPersistence.UserManager.getUser(username);
+                
+                // If user doesn't exist, create new user
+                if (!user) {
+                    user = {
+                        username: username,
+                        password: password,
+                        stats: {
+                            wins: 0,
+                            losses: 0,
+                            gamesPlayed: 0
+                        },
+                        createdAt: new Date().toISOString()
+                    };
+                    window.DataPersistence.UserManager.saveUser(user);
+                    alert('Conta criada com sucesso!');
+                } else {
+                    // Authenticate existing user
+                    user = window.DataPersistence.UserManager.authenticate(username, password);
+                    if (!user) {
+                        alert('Senha incorreta!');
+                        return;
+                    }
+                    alert('Login realizado com sucesso!');
+                }
+                
+                // Store current user in session
+                sessionStorage.setItem('currentUser', username);
+                
+                // Update UI to show logged in state
+                const panelTitle = panel.querySelector('#account-panel-title');
+                if (panelTitle) {
+                    panelTitle.textContent = `Bem-vindo, ${username}!`;
+                }
+                
+                // Hide form, show user info
+                loginForm.style.display = 'none';
+                
+                closePanel();
+            } else {
+                alert('Sistema de persistência não está disponível.');
+            }
+        });
+    }
+
+    // Handle create account link
+    const createAccountLink = document.getElementById('create-account');
+    if (createAccountLink) {
+        createAccountLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('Por favor, preencha todos os campos para criar uma conta.');
+                return;
+            }
+            
+            if (window.DataPersistence) {
+                const existingUser = window.DataPersistence.UserManager.getUser(username);
+                
+                if (existingUser) {
+                    alert('Este nome de usuário já existe. Por favor, escolha outro.');
+                    return;
+                }
+                
+                const newUser = {
+                    username: username,
+                    password: password,
+                    stats: {
+                        wins: 0,
+                        losses: 0,
+                        gamesPlayed: 0
+                    },
+                    createdAt: new Date().toISOString()
+                };
+                
+                window.DataPersistence.UserManager.saveUser(newUser);
+                alert('Conta criada com sucesso! Você já está logado.');
+                
+                // Store current user in session
+                sessionStorage.setItem('currentUser', username);
+                
+                // Update UI
+                const panelTitle = panel.querySelector('#account-panel-title');
+                if (panelTitle) {
+                    panelTitle.textContent = `Bem-vindo, ${username}!`;
+                }
+                
+                loginForm.style.display = 'none';
+                closePanel();
+            }
+        });
+    }
 })();

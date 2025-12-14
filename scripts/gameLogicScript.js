@@ -639,6 +639,9 @@ function movePiece(piece, newRow, newCol) {
     placePieceOnCell(newCellIndex, gameState.currentPlayer, true, piece.hasCompletedEnemyTerritory);
 
     clearSelection();
+    
+    // Auto-save after move
+    autoSaveGame();
 }
 
 // Capture an enemy piece
@@ -726,6 +729,9 @@ function switchTurn() {
 
     document.querySelector('.dice-total').textContent = 'Resultado: —';
     updateMessage(`Turno do jogador ${gameState.currentPlayer === 'red' ? 'Vermelho' : 'Azul'}. Role os dados!`);
+    
+    // Auto-save after turn switch
+    autoSaveGame();
 }
 
 // Skip turn function
@@ -768,6 +774,39 @@ function endGame(winner) {
     messageBox.classList.add('game-over');
 
     document.getElementById('roll-dice').disabled = true;
+    
+    // Save game to history and update user stats
+    if (window.DataPersistence) {
+        const gameRecord = {
+            winner: winner,
+            boardSize: gameState.boardSize,
+            redPiecesRemaining: gameState.pieces.red.length,
+            bluePiecesRemaining: gameState.pieces.blue.length
+        };
+        window.DataPersistence.GameHistoryManager.addGameToHistory(gameRecord);
+        
+        // Update user statistics if logged in
+        const currentUser = sessionStorage.getItem('currentUser');
+        if (currentUser) {
+            const user = window.DataPersistence.UserManager.getUser(currentUser);
+            if (user) {
+                const stats = user.stats || { wins: 0, losses: 0, gamesPlayed: 0 };
+                stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
+                
+                // Assuming red is the current user's color (this could be configurable)
+                if (winner === 'red') {
+                    stats.wins = (stats.wins || 0) + 1;
+                } else {
+                    stats.losses = (stats.losses || 0) + 1;
+                }
+                
+                window.DataPersistence.UserManager.updateStats(currentUser, stats);
+            }
+        }
+        
+        // Clear saved game state since game is complete
+        window.DataPersistence.GameStateManager.clearGameState();
+    }
 }
 
 // Update message
@@ -812,11 +851,132 @@ function setupCellClickHandlers() {
     });
 }
 
+// Save game state to localStorage
+function saveGame() {
+    if (window.DataPersistence && gameState.gameActive) {
+        // Create a serializable version of game state
+        const stateToSave = {
+            boardSize: gameState.boardSize,
+            currentPlayer: gameState.currentPlayer,
+            diceValue: gameState.diceValue,
+            bonusRoll: gameState.bonusRoll,
+            pieces: {
+                red: gameState.pieces.red.map(p => ({
+                    row: p.row,
+                    col: p.col,
+                    active: p.active,
+                    cellIndex: p.cellIndex,
+                    inEnemyTerritory: p.inEnemyTerritory,
+                    hasCompletedEnemyTerritory: p.hasCompletedEnemyTerritory
+                })),
+                blue: gameState.pieces.blue.map(p => ({
+                    row: p.row,
+                    col: p.col,
+                    active: p.active,
+                    cellIndex: p.cellIndex,
+                    inEnemyTerritory: p.inEnemyTerritory,
+                    hasCompletedEnemyTerritory: p.hasCompletedEnemyTerritory
+                }))
+            },
+            gameActive: gameState.gameActive,
+            piecesActivated: gameState.piecesActivated
+        };
+        
+        return window.DataPersistence.GameStateManager.saveGameState(stateToSave);
+    }
+    return false;
+}
+
+// Load game state from localStorage
+function loadGame() {
+    if (window.DataPersistence) {
+        const savedState = window.DataPersistence.GameStateManager.loadGameState();
+        if (savedState) {
+            // Restore game state
+            gameState.boardSize = savedState.boardSize;
+            gameState.currentPlayer = savedState.currentPlayer;
+            gameState.diceValue = savedState.diceValue;
+            gameState.bonusRoll = savedState.bonusRoll;
+            gameState.pieces.red = savedState.pieces.red;
+            gameState.pieces.blue = savedState.pieces.blue;
+            gameState.gameActive = savedState.gameActive;
+            gameState.piecesActivated = savedState.piecesActivated;
+            gameState.selectedPiece = null;
+            gameState.possibleMoves = [];
+            
+            // Recreate the board
+            createBoardFromState();
+            
+            updateMessage(`Jogo carregado! Turno do jogador ${gameState.currentPlayer === 'red' ? 'Vermelho' : 'Azul'}.`);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Create board from saved state
+function createBoardFromState() {
+    const board = document.getElementById('game-board');
+    board.innerHTML = '';
+    board.classList.remove('hidden');
+    
+    board.style.gridTemplateRows = `repeat(4, auto)`;
+    board.style.gridTemplateColumns = `repeat(${gameState.boardSize}, auto)`;
+    
+    // Create cells
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < gameState.boardSize; col++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            board.appendChild(cell);
+        }
+    }
+    
+    const cells = document.querySelectorAll('.cell');
+    
+    // Clear all cells
+    cells.forEach(cell => {
+        cell.innerHTML = '';
+        cell.classList.remove('has-piece', 'selectable', 'possible-move', 'capture-move', 'selected');
+    });
+    
+    // Place red pieces
+    gameState.pieces.red.forEach(piece => {
+        placePieceOnCell(piece.cellIndex, 'red', piece.active, piece.hasCompletedEnemyTerritory);
+    });
+    
+    // Place blue pieces
+    gameState.pieces.blue.forEach(piece => {
+        placePieceOnCell(piece.cellIndex, 'blue', piece.active, piece.hasCompletedEnemyTerritory);
+    });
+    
+    setupCellClickHandlers();
+}
+
+// Auto-save after each move
+function autoSaveGame() {
+    if (window.DataPersistence) {
+        window.DataPersistence.GameStateManager.autoSave(gameState);
+    }
+}
+
+// Check if there's a saved game available
+function hasSavedGame() {
+    if (window.DataPersistence) {
+        return window.DataPersistence.GameStateManager.hasSavedGame();
+    }
+    return false;
+}
+
 // Export functions for use in other scripts
 window.gameLogic = {
     initializePieces,
     makeCurrentPlayerPiecesSelectable,
     setupCellClickHandlers,
     skipTurn,
-    gameState
+    gameState,
+    saveGame,
+    loadGame,
+    hasSavedGame,
+    autoSaveGame
 };
