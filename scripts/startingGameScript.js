@@ -101,6 +101,20 @@ playForm.addEventListener('submit', (e) => {
     closeDialog();
     createBoard(settings.boardSize, settings.starter);
 
+    // Store user's color preference
+    // If starter is 'player', user plays as red; if 'pc', user plays as blue
+    // If 'random', determine which color the user gets
+    let userColor = 'red'; // Default
+    if (settings.starter === 'pc') {
+        userColor = 'blue';
+    } else if (settings.starter === 'random') {
+        // If random start, user gets the color of whoever starts (already determined in createBoard)
+        if (window.gameLogic && window.gameLogic.gameState) {
+            userColor = window.gameLogic.gameState.currentPlayer;
+        }
+    }
+    sessionStorage.setItem('userColor', userColor);
+
     // Enable roll button
     document.getElementById('roll-dice').disabled = false;
 });

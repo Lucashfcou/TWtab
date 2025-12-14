@@ -787,14 +787,15 @@ function endGame(winner) {
         
         // Update user statistics if logged in
         const currentUser = sessionStorage.getItem('currentUser');
+        const userColor = sessionStorage.getItem('userColor') || 'red'; // Default to red for backwards compatibility
         if (currentUser) {
             const user = window.DataPersistence.UserManager.getUser(currentUser);
             if (user) {
                 const stats = user.stats || { wins: 0, losses: 0, gamesPlayed: 0 };
                 stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
                 
-                // Assuming red is the current user's color (this could be configurable)
-                if (winner === 'red') {
+                // Check if user won or lost based on their selected color
+                if (winner === userColor) {
                     stats.wins = (stats.wins || 0) + 1;
                 } else {
                     stats.losses = (stats.losses || 0) + 1;

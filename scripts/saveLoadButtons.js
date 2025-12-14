@@ -85,10 +85,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Show auto-save indicator when game state changes
-    let autoSaveTimeout = null;
-    const originalAutoSave = window.gameLogic?.autoSaveGame;
-    
-    if (window.gameLogic && typeof originalAutoSave === 'function') {
+    // Use a setup function that runs after gameLogic is loaded
+    function setupAutoSaveIndicator() {
+        if (!window.gameLogic || typeof window.gameLogic.autoSaveGame !== 'function') {
+            // gameLogic not ready yet, try again after a short delay
+            setTimeout(setupAutoSaveIndicator, 100);
+            return;
+        }
+        
+        let autoSaveTimeout = null;
+        const originalAutoSave = window.gameLogic.autoSaveGame;
+        
         window.gameLogic.autoSaveGame = function() {
             // Call original function
             originalAutoSave.apply(this, arguments);
@@ -106,4 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
+    
+    // Start trying to set up the indicator
+    setupAutoSaveIndicator();
 });
