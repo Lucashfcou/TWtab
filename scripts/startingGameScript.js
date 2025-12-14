@@ -81,8 +81,39 @@ playForm.addEventListener('submit', (e) => {
 
     console.log('Game settings chosen:', settings);
 
+    // Check if there's a saved game
+    if (window.gameLogic && window.gameLogic.hasSavedGame()) {
+        if (confirm('Há um jogo salvo. Deseja continuar o jogo anterior?')) {
+            closeDialog();
+            if (window.gameLogic.loadGame()) {
+                // Enable roll button
+                document.getElementById('roll-dice').disabled = false;
+                return;
+            }
+        } else {
+            // Clear saved game if user wants to start new
+            if (window.DataPersistence) {
+                window.DataPersistence.GameStateManager.clearGameState();
+            }
+        }
+    }
+
     closeDialog();
     createBoard(settings.boardSize, settings.starter);
+
+    // Store user's color preference
+    // If starter is 'player', user plays as red; if 'pc', user plays as blue
+    // If 'random', determine which color the user gets
+    let userColor = 'red'; // Default
+    if (settings.starter === 'pc') {
+        userColor = 'blue';
+    } else if (settings.starter === 'random') {
+        // If random start, user gets the color of whoever starts (already determined in createBoard)
+        if (window.gameLogic && window.gameLogic.gameState) {
+            userColor = window.gameLogic.gameState.currentPlayer;
+        }
+    }
+    sessionStorage.setItem('userColor', userColor);
 
     // Enable roll button
     document.getElementById('roll-dice').disabled = false;
