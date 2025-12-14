@@ -11,6 +11,7 @@
     <script src="scripts/rollScript.js" defer></script>
     <script src="scripts/gameLogicScript.js" defer></script>
     <script src="scripts/skipButtonScript.js" defer></script>
+    <script src="scripts/saveLoadButtons.js" defer></script>
 
 </head>
 <body>
@@ -377,6 +378,13 @@
             </div>
             <div class="forfeit" id="forfeit-button" role="button" tabindex="0">
                 desistir
+            </div>
+            <div class="game-controls">
+                <button id="save-game-btn" class="control-btn" title="Salvar jogo">💾 Salvar</button>
+                <button id="load-game-btn" class="control-btn" title="Carregar jogo">📂 Carregar</button>
+            </div>
+            <div id="save-indicator" class="save-indicator" style="display: none;">
+                ✓ Jogo salvo automaticamente
             </div>
         </aside>
     </div>
